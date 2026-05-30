@@ -345,14 +345,14 @@ namespace Vintagestory.GameContent
         public override int GetColorWithoutTint(ICoreClientAPI capi, BlockPos pos, ref EnumHandling handled)
         {
             handled = EnumHandling.PreventDefault;
-            int texSubId = block.GetBEBehavior<BEBehaviorDisplay>(pos).GetParticleColorTextureSubId();
+            int texSubId = block.GetBEBehavior<BEBehaviorDisplay>(pos)?.GetParticleColorTextureSubId() ?? 0;
             return capi.BlockTextureAtlas.GetAverageColor(texSubId) | 0xff << 24;
         }
 
         public override int GetRandomColor(ICoreClientAPI capi, BlockPos pos, BlockFacing facing, int rndIndex, ref EnumHandling handled)
         {
             handled = EnumHandling.PreventDefault;
-            int texSubId = block.GetBEBehavior<BEBehaviorDisplay>(pos).GetParticleColorTextureSubId();
+            int texSubId = block.GetBEBehavior<BEBehaviorDisplay>(pos)?.GetParticleColorTextureSubId() ?? 0;
             return capi.BlockTextureAtlas.GetRandomColor(texSubId, rndIndex) | 0xff << 24;
         }
 

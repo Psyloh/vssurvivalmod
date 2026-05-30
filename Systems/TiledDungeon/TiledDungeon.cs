@@ -159,11 +159,11 @@ namespace Vintagestory.ServerMods
 
                 if (tile.TileGenerator != null)
                 {
-                    foreach (var (code, subtile) in tile.TileGenerator.TilesByCode)
+                    foreach (var genTile in tile.TileGenerator.Tiles)
                     {
-                        if (!TilesByCode.TryAdd(code, subtile))
+                        if (!TilesByCode.TryAdd(genTile.Code, genTile))
                         {
-                            api.Logger.Error($"Dungeon {Code} has a TileGenerator with duplicate tile code: {code}. Tile will be skipped.");
+                            api.Logger.Error($"Dungeon {Code} has a TileGenerator with duplicate tile code: {genTile.Code}. Tile will be skipped.");
                         }
                     }
                 }

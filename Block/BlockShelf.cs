@@ -15,6 +15,7 @@ namespace Vintagestory.GameContent
         {
             base.OnLoaded(api);
 
+            PlacedPriorityInteract = true;
             interactions = ObjectCacheUtil.GetOrCreate(api, "shelfInteractions", () =>
             {
                 List<ItemStack> usableItemStacklist = new List<ItemStack>();

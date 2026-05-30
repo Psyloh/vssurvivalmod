@@ -443,7 +443,7 @@ namespace Vintagestory.GameContent
             base.OnGuiOpened();
             traderInventory.SlotModified += TraderInventory_SlotModified;
 
-            auctionSys.DidEnterAuctionHouse();
+            auctionSys.DidEnterAuctionHouse(owningEntity);
         }
 
         public override void OnGuiClosed()
@@ -464,7 +464,7 @@ namespace Vintagestory.GameContent
             auctionSlotInv[0].Itemstack = null;
             capi.World.Player.InventoryManager.CloseInventoryAndSync(auctionSlotInv);
 
-            auctionSys.DidLeaveAuctionHouse();
+            auctionSys.DidLeaveAuctionHouse(owningEntity);
         }
 
         public override void OnBeforeRenderFrame3D(float deltaTime)

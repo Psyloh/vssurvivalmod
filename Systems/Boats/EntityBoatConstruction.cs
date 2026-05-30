@@ -182,7 +182,7 @@ namespace Vintagestory.GameContent
             {
                 wis = wis.Append(new WorldInteraction()
                 {
-                    HotKeyCode = "sneak",
+                    HotKeyCode = "shift",
                     RequireFreeHand = true,
                     MouseButton = EnumMouseButton.Right,
                     ActionLangCode = "rollers-deconstruct"

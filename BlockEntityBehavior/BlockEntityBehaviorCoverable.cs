@@ -45,7 +45,19 @@ namespace Vintagestory.GameContent
 
             if (WallStack != null && byPlayer.WorldData.CurrentGameMode != EnumGameMode.Creative)
             {
-                Api.World.SpawnItemEntity(WallStack, Pos);
+                if (WallStack.Block != null)
+                {
+                    ItemStack[] blockDrops = WallStack.Block.GetDrops(Api.World, Pos, byPlayer);
+                    foreach (ItemStack blockDrop in blockDrops)
+                    {
+                        Api.World.SpawnItemEntity(blockDrop, Pos);
+                    }
+                }
+                else
+                {
+                    Api.World.SpawnItemEntity(WallStack, Pos);
+                }
+
                 WallStack = null;
             }
 
@@ -113,7 +125,19 @@ namespace Vintagestory.GameContent
             base.OnBlockBroken(byPlayer);
             if (WallStack != null)
             {
-                Api.World.SpawnItemEntity(WallStack, Pos);
+                if (WallStack.Block != null)
+                {
+                    ItemStack[] blockDrops = WallStack.Block.GetDrops(Api.World, Pos, byPlayer);
+                    foreach (ItemStack blockDrop in blockDrops)
+                    {
+                        Api.World.SpawnItemEntity(blockDrop, Pos);
+                    }
+                }
+                else
+                {
+                    Api.World.SpawnItemEntity(WallStack, Pos);
+                }
+
                 WallStack = null;
             }
         }

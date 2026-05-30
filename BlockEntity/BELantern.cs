@@ -134,11 +134,12 @@ namespace Vintagestory.GameContent
             if (slot.Empty) return false;
 
             CollectibleObject obj = slot.Itemstack.Collectible;
-            if (obj.FirstCodePart() == "glass" && obj.Variant.ContainsKey("color"))
+            Block oldGlassBlock = Api.World.GetBlock(AssetLocation.Create("glass-" + glass));
+            if (oldGlassBlock != null && obj.FirstCodePart() == "glass" && obj.Variant.ContainsKey("color"))
             {
                 if (glass != "quartz" && byPlayer.WorldData.CurrentGameMode != EnumGameMode.Creative)
                 {
-                    ItemStack stack = new ItemStack(Api.World.GetBlock(new AssetLocation("glass-" + glass)));
+                    ItemStack stack = new ItemStack(oldGlassBlock);
                     if (!byPlayer.InventoryManager.TryGiveItemstack(stack, true))
                     {
                         Api.World.SpawnItemEntity(stack, Pos.ToVec3d().Add(0.5, 0, 0.5));
@@ -155,7 +156,7 @@ namespace Vintagestory.GameContent
                 if (byPlayer.WorldData.CurrentGameMode != EnumGameMode.Creative && glass != "quartz") slot.TakeOut(1);
 
                 if (Api.Side == EnumAppSide.Client) (byPlayer as IClientPlayer).TriggerFpAnimation(EnumHandInteract.HeldItemInteract);
-                Api.World.PlaySoundAt(Api.World.GetBlock(new AssetLocation("glass-" + glass)).Sounds.Place, Pos, -0.4, byPlayer);
+                Api.World.PlaySoundAt(oldGlassBlock?.Sounds.Place ?? GlobalConstants.DefaultBuildSound, Pos, -0.4, byPlayer);
 
                 setLightColor(origlightHsv, lightHsv, glass);
                 Api.World.BlockAccessor.ExchangeBlock(Block.Id, Pos); // Forces a lighting update

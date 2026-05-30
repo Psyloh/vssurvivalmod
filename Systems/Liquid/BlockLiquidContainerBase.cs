@@ -1038,7 +1038,8 @@ namespace Vintagestory.GameContent
                 ItemStack stack = props.WhenSpilled.Stack.ResolvedItemstack.Clone();
                 stack.StackSize = contentStack.StackSize;
 
-                splashLiquid(stack, blockSel.FullPosition);
+                Entity eItem = byEntity.World.SpawnItemEntity(stack, blockSel.Position.ToVec3d().Add(blockSel.HitPosition));
+                if (byPlayer != null && api.Side == EnumAppSide.Server)  eItem.WatchedAttributes.SetString("byPlayerUid", byPlayer.PlayerUID);
             }
 
 
@@ -1048,22 +1049,8 @@ namespace Vintagestory.GameContent
             return true;
         }
 
-        private void splashLiquid(ItemStack stack, Vec3d pos)
-        {
-            WaterTightContainableProps props = GetContainableProps(stack);
-            float litres = stack.StackSize / (props?.ItemsPerLitre ?? 1f);
 
-            api.World.SpawnCubeParticles(pos, stack, 0.75f, Math.Min(100, (int)(2 * litres)), 0.45f);
-            api.World.PlaySoundAt(new AssetLocation("sounds/environment/smallsplash"), (float)pos.X, (float)pos.Y, (float)pos.Z, null);
 
-            var bef = api.World.BlockAccessor.GetBlockEntity(pos.AsBlockPos) as BlockEntityFarmland;
-            if (bef != null && stack.Block?.Variant["height"] != null)
-            {
-                var height = stack.Block.Variant["height"]?.ToInt() ?? 7;
-                bef.WaterFarmland(height / 6f, false);
-                bef.MarkDirty(true);
-            }
-        }
 
 
         #endregion

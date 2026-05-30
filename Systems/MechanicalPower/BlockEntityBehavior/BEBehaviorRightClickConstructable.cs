@@ -15,6 +15,7 @@ namespace Vintagestory.GameContent
         protected RightClickConstruction rcc;
         public CompositeShape shape { get; protected set; }
         public event Action<CompositeShape> OnShapeChanged;
+        public API.Common.Func<IPlayer, BlockSelection, bool> OnAttemptConstruct = null;
 
         protected float brokenDropsRatio=1f;
 
@@ -42,6 +43,8 @@ namespace Vintagestory.GameContent
         public bool OnBlockInteractStart(IWorldAccessor world, IPlayer byPlayer, BlockSelection blockSel, ref EnumHandling handling)
         {
             handling = EnumHandling.PreventDefault;
+            if (OnAttemptConstruct != null && !OnAttemptConstruct.Invoke(byPlayer, blockSel)) return false;
+
             if (rcc.OnInteract(byPlayer.Entity, byPlayer.Entity.RightHandItemSlot))
             {
                 updateShape();

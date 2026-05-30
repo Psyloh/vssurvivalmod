@@ -322,8 +322,8 @@ namespace Vintagestory.GameContent
         {
             if (!byPlayer.Entity.Controls.ShiftKey)
             {
-                BELantern bel = world.BlockAccessor.GetBlockEntity(blockSel.Position) as BELantern;
-                if (bel.Interact(byPlayer))
+                BELantern bel = world.BlockAccessor.GetBlockEntity<BELantern>(blockSel.Position);
+                if (bel != null && bel.Interact(byPlayer))
                 {
                     return true;
                 }
@@ -431,11 +431,12 @@ namespace Vintagestory.GameContent
             if (handSlot.Empty) return false;
 
             CollectibleObject obj = handSlot.Itemstack.Collectible;
-            if (obj.FirstCodePart() == "glass" && obj.Variant.ContainsKey("color"))
+            Block oldGlassBlock = be.Api.World.GetBlock(AssetLocation.Create("glass-" + glass));
+            if (oldGlassBlock != null && obj.FirstCodePart() == "glass" && obj.Variant.ContainsKey("color"))
             {
                 if (glass != "quartz" && byPlayer.WorldData.CurrentGameMode != EnumGameMode.Creative)
                 {
-                    ItemStack stack = new ItemStack(be.Api.World.GetBlock("glass-" + glass));
+                    ItemStack stack = new ItemStack(oldGlassBlock);
                     if (!byPlayer.InventoryManager.TryGiveItemstack(stack, true))
                     {
                         be.Api.World.SpawnItemEntity(stack, be.Pos.ToVec3d().Add(0.5, 0, 0.5));
@@ -454,7 +455,7 @@ namespace Vintagestory.GameContent
                 if (byPlayer.WorldData.CurrentGameMode != EnumGameMode.Creative && glass != "quartz") handSlot.TakeOut(1);
 
                 (byPlayer as IClientPlayer)?.TriggerFpAnimation(EnumHandInteract.HeldItemInteract);
-                be.Api.World.PlaySoundAt(be.Api.World.GetBlock("glass-" + glass).Sounds.Place, be.Pos, -0.4, byPlayer);
+                be.Api.World.PlaySoundAt(oldGlassBlock?.Sounds.Place ?? GlobalConstants.DefaultBuildSound, be.Pos, -0.4, byPlayer);
 
                 (be as BlockEntityGroundStorage)?.LightUpdate(slot.Itemstack);
 

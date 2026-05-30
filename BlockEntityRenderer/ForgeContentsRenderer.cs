@@ -62,6 +62,13 @@ namespace Vintagestory.GameContent
         private void RegenCoalMesh(bool burning)
         {
             coalMeshRef?.Dispose();
+
+            if (block.Attributes["coalshapeloc"] == null)
+            {
+                capi.Logger.Warning("Block {0} does not have coalshapeloc set? Forge contents will be invisible.", block.Code);
+                return;
+            }
+
             var shapeloc = AssetLocation.Create(block.Attributes["coalshapeloc"].ToString(), block.Code.Domain).WithPathAppendixOnce(".json").WithPathPrefixOnce("shapes/");
             var coalshape = capi.Assets.TryGet(shapeloc)?.ToObject<Shape>();
             if (coalshape == null)
@@ -194,7 +201,7 @@ namespace Vintagestory.GameContent
                 prog.Stop();
             }
 
-            if (fuelLevel > 0)
+            if (fuelLevel > 0 && coalMeshRef != null)
             {
                 IStandardShaderProgram prog = rpi.StandardShader;
                 prog.Use();

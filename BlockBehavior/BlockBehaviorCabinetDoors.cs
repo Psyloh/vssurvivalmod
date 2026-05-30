@@ -60,7 +60,7 @@ public class BlockBehaviorCabinetDoors : StrongBlockBehavior
                 return base.GetPlacedBlockInteractionHelp(world, selection, forPlayer, ref handling).Append(new WorldInteraction()
                 {
                     ActionLangCode = "addcabinetdoors",
-                    HotKeyCode = "sprint",
+                    HotKeyCode = "ctrl",
                     MouseButton = EnumMouseButton.Right,
                     Itemstacks = doorStacks
                 });
@@ -71,7 +71,7 @@ public class BlockBehaviorCabinetDoors : StrongBlockBehavior
                 return base.GetPlacedBlockInteractionHelp(world, selection, forPlayer, ref handling).Append(new WorldInteraction()
                 {
                     ActionLangCode = "removecabinetdoors",
-                    HotKeyCode = "sprint",
+                    HotKeyCode = "ctrl",
                     MouseButton = EnumMouseButton.Right,
                     Itemstacks = BlockBehaviorWrenchOrientable.wrenchItems
                 });

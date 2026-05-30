@@ -100,6 +100,7 @@ namespace Vintagestory.GameContent.Mechanics
             }
 
             pvBh = GetBehavior<BEBehaviorMPPulverizer>();
+            UpdateCaps();
         }
 
         float accumLeft;

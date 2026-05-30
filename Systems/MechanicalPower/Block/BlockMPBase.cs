@@ -5,7 +5,7 @@ using Vintagestory.API.MathTools;
 
 namespace Vintagestory.GameContent.Mechanics
 {
-    public abstract class BlockMPBase : Block, IMechanicalPowerBlock
+    public abstract class BlockMPBase : BlockGeneric, IMechanicalPowerBlock
     {
         public abstract void DidConnectAt(IWorldAccessor world, BlockPos pos, BlockFacing face);
         public abstract bool HasMechPowerConnectorAt(IWorldAccessor world, BlockPos pos, BlockFacing face, BlockMPBase forBlock);

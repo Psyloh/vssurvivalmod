@@ -1,9 +1,11 @@
 using System;
 using System.Text;
+using Vintagestory.API.Client;
 using Vintagestory.API.Common;
 using Vintagestory.API.Config;
 using Vintagestory.API.Datastructures;
 using Vintagestory.API.MathTools;
+using static OpenTK.Graphics.OpenGL.GL;
 
 #nullable disable
 
@@ -40,6 +42,7 @@ namespace Vintagestory.GameContent.Mechanics
         public override void Initialize(ICoreAPI api, JsonObject properties)
         {
             bebconstructable = Blockentity.GetBehavior<BEBehaviorRightClickConstructable>();
+            bebconstructable?.OnAttemptConstruct = OnAttemptConstruction;
             facing = BlockFacing.FromCode(Block.Variant["side"]).Opposite;
 
             base.Initialize(api, properties);
@@ -66,15 +69,27 @@ namespace Vintagestory.GameContent.Mechanics
             };
         }
 
+        public bool OnAttemptConstruction(IPlayer byPlayer, BlockSelection blockSel)
+        {
+            CheckWater(0);
+            if (blocked)
+            {
+                (Api as ICoreClientAPI)?.TriggerIngameError(this, "waterwheelblocked", Lang.Get("error-wheel-blocked"));
+                return false;
+            }
+
+            if (suitablePowerSourceBlockCount == 0)
+            {
+                (Api as ICoreClientAPI)?.TriggerIngameError(this, "waterwheelnowater", Lang.Get("error-wheel-nowater"));
+            }
+
+            return true;
+        }
 
         // Checked both server side and client side: client side only to produce suitablePowerSourceBlockCount for the Block Info HUD
         protected void CheckWater(float dt)
         {
-            if (!bebconstructable.IsComplete)
-            {
-                flowRate = 0;
-                return;
-            }
+            bool incomplete = !bebconstructable.IsComplete;
 
             suitablePowerSourceBlockCount = 0;
 
@@ -85,7 +100,11 @@ namespace Vintagestory.GameContent.Mechanics
             FastVec3f axialVec = new FastVec3f(facing.Normalf);
             blocked = false;
             int radius = diameter / 2;
-            if (radius < 1) return;
+            if (radius < 1)
+            {
+                flowRate = 0;
+                return;
+            }
 
             float moment = 0f;  // The moment is the total rotational force - which becomes torque - being applied to the wheel by any surrounding water
             BlockPos pos = new BlockPos(Pos.dimension);
@@ -121,8 +140,12 @@ namespace Vintagestory.GameContent.Mechanics
                 {
                     blockSide = (dX > 0) ? BlockFacing.WEST : BlockFacing.EAST;
                 }
-                if (blockedBy(block, pos, blockSide)) return;    // NOTE: for waterwheels with radius larger than one, we are not checking whether any inner blocks block the rotation - that should probably be checked also
-                                                                // also seems better to check for any block with a collision box, e.g. axle is not solid on any side
+                if (blockedBy(block, pos, blockSide))
+                {
+                    flowRate = 0;
+                    return;    // NOTE: for waterwheels with radius larger than one, we are not checking whether any inner blocks block the rotation - that should probably be checked also
+                               // also seems better to check for any block with a collision box, e.g. axle is not solid on any side
+                }
 
                 // Apply rotational force
                 if (!block.ForFluidsLayer) block = Api.World.BlockAccessor.GetBlock(pos, BlockLayersAccess.Fluid);    // Need because if there are stones or plants or snowlayer at pos, this will miss the fluid block
@@ -182,6 +205,7 @@ namespace Vintagestory.GameContent.Mechanics
                     }
                 }
             }
+
             flowRate = Math.Abs(moment * 750);
             if (flowRate > 0)
             {
@@ -192,6 +216,13 @@ namespace Vintagestory.GameContent.Mechanics
                     bool oppositeDir = (dir < 0);
                     this.SetPropagationDirection(new MechPowerPath(oppositeDir ? facing.Opposite : facing, 1, Pos, false));
                 }
+            }
+
+            if (incomplete)
+            {
+                // If incomplete, we have counted the flowRate but still set the power to 0
+                flowRate = 0;
+                flowVec.Set(0, 0, 0);
             }
         }
 
@@ -262,11 +293,12 @@ namespace Vintagestory.GameContent.Mechanics
             if (!bebconstructable.IsComplete)
             {
                 sb.AppendLine(Lang.Get("waterwheel-construction-step-with-stage-current-and-total", bebconstructable.CurrentCompletedStage, bebconstructable.Stages));
+                if (blocked) sb.AppendLine(Lang.Get("Wheel is blocked, make sure the entire wheel is free from solid blocks."));
             }
             else
             {
 
-                if (blocked) sb.AppendLine(Lang.Get("Wheel is blocked, make sure no the entire wheel is free from solid blocks."));
+                if (blocked) sb.AppendLine(Lang.Get("Wheel is blocked, make sure the entire wheel is free from solid blocks."));
                 else sb.AppendLine(Lang.Get("waterwheel-suitable-power-source-blocks-nearby-blockamount", suitablePowerSourceBlockCount));
 
                 if (Api.World.EntityDebugMode)

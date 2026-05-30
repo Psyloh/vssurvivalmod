@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using System.Linq;
 using Vintagestory.API.Common;
 using Vintagestory.API.Common.CommandAbbr;
+using Vintagestory.API.Config;
 using Vintagestory.API.Datastructures;
 using Vintagestory.API.MathTools;
 using Vintagestory.API.Server;
@@ -201,6 +202,10 @@ namespace Vintagestory.ServerMods
         {
             var assets = sapi.Assets.GetMany<TiledDungeonConfig>(sapi.Logger, "worldgen/tileddungeons.json");
             Tcfg = new TiledDungeonConfig();
+            var defaultConf = assets.First(v => v.Key.Domain == GlobalConstants.DefaultDomain).Value;
+            Tcfg.storyStructMinDistance = defaultConf.storyStructMinDistance;
+            Tcfg.minDistance = defaultConf.minDistance;
+
             Tcfg.RocktypeRemapGroups = new Dictionary<string, Dictionary<AssetLocation, AssetLocation>>();
             var dungeons = new List<TiledDungeon>();
 

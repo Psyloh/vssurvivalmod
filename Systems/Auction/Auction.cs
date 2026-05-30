@@ -263,14 +263,14 @@ namespace Vintagestory.GameContent
             }
         }
 
-        public void DidEnterAuctionHouse()
+        public void DidEnterAuctionHouse(Entity traderEntity)
         {
-            clientCh.SendPacket(new AuctionActionPacket() { Action = EnumAuctionAction.EnterAuctionHouse });
+            clientCh.SendPacket(new AuctionActionPacket() { Action = EnumAuctionAction.EnterAuctionHouse, AtAuctioneerEntityId = traderEntity.EntityId });
         }
 
-        public void DidLeaveAuctionHouse()
+        public void DidLeaveAuctionHouse(Entity traderEntity)
         {
-            clientCh.SendPacket(new AuctionActionPacket() { Action = EnumAuctionAction.LeaveAuctionHouse });
+            clientCh.SendPacket(new AuctionActionPacket() { Action = EnumAuctionAction.LeaveAuctionHouse, AtAuctioneerEntityId = traderEntity.EntityId });
         }
 
         public void PlaceAuctionClient(Entity traderEntity, int price, int durationWeeks = 1)
@@ -358,9 +358,19 @@ namespace Vintagestory.GameContent
         {
             if (!auctionHouseEnabled) return;
 
+            static bool PlayerIsTooFarAway(IServerPlayer player, Entity auctioneer)
+            {
+                var range = player.WorldData.PickingRange;
+                return auctioneer.Pos.SquareDistanceTo(player.Entity.Pos) > (range * range);
+            }
+
             switch (pkt.Action)
             {
                 case EnumAuctionAction.EnterAuctionHouse:
+                {
+                    var auctioneer = sapi.World.GetEntityById(pkt.AtAuctioneerEntityId);
+                    if (PlayerIsTooFarAway(fromPlayer, auctioneer)) return;
+
                     InventoryGeneric ainv;
                     if (!createAuctionSlotByPlayer.TryGetValue(fromPlayer.PlayerUID, out ainv))
                     {
@@ -376,18 +386,29 @@ namespace Vintagestory.GameContent
                     sendAuctions(auctions.Values, null, true, fromPlayer);
 
                     break;
+                }
+
                 case EnumAuctionAction.LeaveAuctionHouse:
+                    // No need to check PlayerIsTooFarAway here, this will only work if the other events were in range either way
+                    // and we might be just outside the range when this gets received because hte player is currently walking away.
                     Event_PlayerDisconnect(fromPlayer);
                     break;
+
                 case EnumAuctionAction.PurchaseAuction:
-                    {
-                        var auctioneerEntity = sapi.World.GetEntityById(pkt.AtAuctioneerEntityId);
-                        PurchaseAuction(pkt.AuctionId, fromPlayer.Entity, auctioneerEntity, pkt.WithDelivery, out string failureCode);
-                        serverCh.SendPacket(new AuctionActionResponsePacket() { Action = pkt.Action, AuctionId = pkt.AuctionId, ErrorCode = failureCode }, fromPlayer);
-                        break;
-                    }
+                {
+                    var auctioneer = sapi.World.GetEntityById(pkt.AtAuctioneerEntityId);
+                    if (PlayerIsTooFarAway(fromPlayer, auctioneer)) return;
+
+                    PurchaseAuction(pkt.AuctionId, fromPlayer.Entity, auctioneer, pkt.WithDelivery, out string failureCode);
+                    serverCh.SendPacket(new AuctionActionResponsePacket() { Action = pkt.Action, AuctionId = pkt.AuctionId, ErrorCode = failureCode }, fromPlayer);
+                    break;
+                }
+
                 case EnumAuctionAction.RetrieveAuction:
                 {
+                    var auctioneer = sapi.World.GetEntityById(pkt.AtAuctioneerEntityId);
+                    if (PlayerIsTooFarAway(fromPlayer, auctioneer)) return;
+
                     auctions.TryGetValue(pkt.AuctionId, out var auction);
                     var state = auction?.State;
                     ItemStack stack = RetrieveAuction(pkt.AuctionId, pkt.AtAuctioneerEntityId, fromPlayer.Entity, out string failureCode);
@@ -430,44 +451,47 @@ namespace Vintagestory.GameContent
                     serverCh.SendPacket(new AuctionActionResponsePacket() { Action = pkt.Action, AuctionId = pkt.AuctionId, ErrorCode = failureCode, MoneyReceived = stack?.Collectible.Attributes?["currency"].Exists == true }, fromPlayer);
                     break;
                 }
+
                 case EnumAuctionAction.PlaceAuction:
+                {
+                    var auctioneer = sapi.World.GetEntityById(pkt.AtAuctioneerEntityId);
+                    if (PlayerIsTooFarAway(fromPlayer, auctioneer)) return;
 
-                    if (createAuctionSlotByPlayer.TryGetValue(fromPlayer.PlayerUID, out var inv))
+                    if (!createAuctionSlotByPlayer.TryGetValue(fromPlayer.PlayerUID, out var inv)) break;
+
+                    if (inv.Empty)
                     {
-                        if (inv.Empty)
-                        {
-                            serverCh.SendPacket(new AuctionActionResponsePacket() { Action = pkt.Action, AuctionId = pkt.AuctionId, ErrorCode = "emptyauctionslot" }, fromPlayer);
-                            break;
-                        }
-
-                        if (pkt.Price < 1)
-                        {
-                            serverCh.SendPacket(new AuctionActionResponsePacket() { Action = pkt.Action, AuctionId = pkt.AuctionId, ErrorCode = "atleast1gear" }, fromPlayer);
-                            break;
-                        }
-
-                        if (pkt.Price > 10000)
-                        {
-                            serverCh.SendPacket(new AuctionActionResponsePacket() { Action = pkt.Action, AuctionId = pkt.AuctionId, ErrorCode = "lessthan10000gears" }, fromPlayer);
-                            break;
-                        }
-
-                        pkt.DurationWeeks = Math.Max(1, pkt.DurationWeeks);
-                        var auctioneerEntity = sapi.World.GetEntityById(pkt.AtAuctioneerEntityId);
-                        PlaceAuction(inv[0], inv[0].StackSize, pkt.Price, pkt.DurationWeeks * 7 * 24, pkt.DurationWeeks / DurationWeeksMul, fromPlayer.Entity, auctioneerEntity, out string failureCode);
-
-                        if (failureCode != null)
-                        {
-                            inv.DropAll(fromPlayer.Entity.Pos.XYZ);
-                        }
-
-                        auctionsData.DebtToTraderByPlayer.TryGetValue(fromPlayer.PlayerUID, out float debt);
-
-                        serverCh.SendPacket(new AuctionActionResponsePacket() { Action = pkt.Action, AuctionId = pkt.AuctionId, ErrorCode = failureCode }, fromPlayer);
-                        serverCh.SendPacket(new DebtPacket() { TraderDebt = debt }, fromPlayer);
+                        serverCh.SendPacket(new AuctionActionResponsePacket() { Action = pkt.Action, AuctionId = pkt.AuctionId, ErrorCode = "emptyauctionslot" }, fromPlayer);
+                        break;
                     }
 
+                    if (pkt.Price < 1)
+                    {
+                        serverCh.SendPacket(new AuctionActionResponsePacket() { Action = pkt.Action, AuctionId = pkt.AuctionId, ErrorCode = "atleast1gear" }, fromPlayer);
+                        break;
+                    }
+
+                    if (pkt.Price > 10000)
+                    {
+                        serverCh.SendPacket(new AuctionActionResponsePacket() { Action = pkt.Action, AuctionId = pkt.AuctionId, ErrorCode = "lessthan10000gears" }, fromPlayer);
+                        break;
+                    }
+
+                    pkt.DurationWeeks = Math.Max(1, pkt.DurationWeeks);
+                    PlaceAuction(inv[0], inv[0].StackSize, pkt.Price, pkt.DurationWeeks * 7 * 24, pkt.DurationWeeks / DurationWeeksMul, fromPlayer.Entity, auctioneer, out string failureCode);
+
+                    if (failureCode != null)
+                    {
+                        inv.DropAll(fromPlayer.Entity.Pos.XYZ);
+                    }
+
+                    auctionsData.DebtToTraderByPlayer.TryGetValue(fromPlayer.PlayerUID, out float debt);
+
+                    serverCh.SendPacket(new AuctionActionResponsePacket() { Action = pkt.Action, AuctionId = pkt.AuctionId, ErrorCode = failureCode }, fromPlayer);
+                    serverCh.SendPacket(new DebtPacket() { TraderDebt = debt }, fromPlayer);
+
                     break;
+                }
             }
         }
 
