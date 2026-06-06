@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using Vintagestory.API.Client;
@@ -42,7 +43,7 @@ namespace Vintagestory.GameContent
         public static int SelectAnswerPacketId = 1214;
         public static int CloseConvoPacketId = 1215;
 
-        public Dictionary<string, DialogueController> ControllerByPlayer = new Dictionary<string, DialogueController>();
+        public ConcurrentDictionary<string, DialogueController> ControllerByPlayer = new();
         public GuiDialogueDialog Dialog;
         public EntityTalkUtil TalkUtil => (entity is ITalkUtil tu) ? tu.TalkUtil : talkUtilInst;
 
@@ -79,7 +80,7 @@ namespace Vintagestory.GameContent
                 dialogue = loadDialogue(dialogueLoc, player);
                 if (dialogue == null) return null;
 
-                controller = ControllerByPlayer[player.PlayerUID] = new DialogueController(world.Api, player, entity as EntityAgent, dialogue);
+                controller = ControllerByPlayer.GetOrAdd(player.PlayerUID, new(world.Api, player, entity as EntityAgent, dialogue));
                 controller.DialogTriggers += Controller_DialogTriggers;
                 OnControllerCreated?.Invoke(controller);
 
@@ -439,14 +440,14 @@ namespace Vintagestory.GameContent
             {
                 bhtaskAi.TaskManager.OnShouldExecuteTask += (task) =>
                 {
-                    return ControllerByPlayer.Count == 0 || task is AiTaskIdle || task is AiTaskSeekEntity || task is AiTaskGotoEntity;
+                    return ControllerByPlayer.IsEmpty || task is AiTaskIdle || task is AiTaskSeekEntity || task is AiTaskGotoEntity;
                 };
             }
 
             var bhActivityDriven = entity.GetBehavior<EntityBehaviorActivityDriven>();
             if (bhActivityDriven != null)
             {
-                bhActivityDriven.OnShouldRunActivitySystem += () => ControllerByPlayer.Count == 0 && gototask == null ? EnumInteruptionType.None : EnumInteruptionType.BeingTalkedTo;
+                bhActivityDriven.OnShouldRunActivitySystem += () => ControllerByPlayer.IsEmpty && gototask == null ? EnumInteruptionType.None : EnumInteruptionType.BeingTalkedTo;
             }
         }
 
