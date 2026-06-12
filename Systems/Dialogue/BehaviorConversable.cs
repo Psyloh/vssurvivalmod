@@ -70,7 +70,7 @@ namespace Vintagestory.GameContent
 
             var controller = ControllerByPlayer.GetOrAdd(player.PlayerUID, _ =>
             {
-                var controller = new(world.Api, player, eagent, dialogueConfig);
+                var controller = new DialogueController(world.Api, player, eagent, dialogueConfig);
                 controller.DialogTriggers += Controller_DialogTriggers;
                 OnControllerCreated?.Invoke(controller);
                 return controller;
